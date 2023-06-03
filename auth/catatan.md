@@ -1,4 +1,5 @@
 **User Authentication**
+
 API for register user and make a custom session token
 
  - Register
