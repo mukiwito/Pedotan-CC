@@ -70,7 +70,7 @@ class InputDataUserResource(Resource):
         email = request.json.get('email')
         noHandphone = request.json.get('noHandphone')
         nik = request.json.get('nik')
-        photo = request.json.get('photo')
+        photo = request.json.get('photo') #upload ke google cloud
         location = request.json.get('location')
 
         try:
