@@ -57,7 +57,7 @@ class LogoutResource(Resource):
         try:
             # Delete the given token
             db = firestore.client()
-            db.collection('cities').document(user.uid).delete()
+            db.collection('session token').document(user.uid).delete()
             return {'message': 'User logged out successfully'}, 200
         except auth.InvalidSessionCookieError:
             return {'message': 'Invalid session token.'}, 401
