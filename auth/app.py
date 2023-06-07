@@ -32,21 +32,17 @@ class AuthTokenResource(Resource):
         try:
             # Authenticate User
             user = auth.get_user_by_email(email)
-            # Session Token
-            session_claims = {
-                'uid': user.uid,
-                'custom_claim': 'your_web_api_key'  # Replace with your Web API Key
-            }
-            session_token = auth.create_custom_token(user.uid, session_claims)
+            
+            session_token = auth.create_custom_token(user.uid)
+            token_data = session_token.decode('utf-8')
 
             session_token_doc = {
-                'uid': user.uid,
-                'token': session_token.decode('utf-8')
+                'token': token_data
             }
             db = firestore.client()
-            db.collection('session token').document('session_token').set(session_token_doc)
+            db.collection('session token').document(user.uid).set(session_token_doc)
 
-            return {'token': session_token.decode('utf-8')}, 200
+            return {'token': token_data}, 200
         except auth.InvalidIdTokenError:
             return {'message': 'Invalid credentials.'}, 401
         except auth.EmailNotFoundError:
@@ -54,18 +50,19 @@ class AuthTokenResource(Resource):
 
 class LogoutResource(Resource):
     def post(self):
-        token = request.json.get('token')
         email = request.json.get('email')
 
         user = auth.get_user_by_email(email)
         
-
         try:
-            # Revoke the given token
-            auth.revoke_refresh_tokens(user.uid)
+            # Delete the given token
+            db = firestore.client()
+            db.collection('cities').document(user.uid).delete()
             return {'message': 'User logged out successfully'}, 200
         except auth.InvalidSessionCookieError:
             return {'message': 'Invalid session token.'}, 401
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
 
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/token')
