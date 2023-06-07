@@ -6,7 +6,7 @@ from firebase_admin import auth, credentials, firestore
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
+cred = credentials.Certificate('credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 class RegisterResource(Resource):
@@ -100,4 +100,4 @@ api.add_resource(LogoutResource, '/auth/logout')
 api.add_resource(InputDataUserResource, '/auth/data')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)
