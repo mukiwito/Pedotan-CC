@@ -38,19 +38,19 @@ class AuthTokenResource(Resource):
             
             # Create token
             session_token = auth.create_custom_token(user.uid)
-            login = session_token.decode('utf-8')
+            token = session_token.decode('utf-8')
 
             # Create data
             session_token_doc = {
                 'uid': user.uid,
-                'login': login
+                'token': token
             }
 
             # Upload data to firestore
             db = firestore.client()
-            db.collection('session token').document(login).set(session_token_doc)
+            db.collection('session token').document(token).set(session_token_doc)
 
-            return {'login': login}, 200
+            return {'token': token}, 200
         except auth.InvalidIdTokenError:
             return {'message': 'Invalid credentials.'}, 401
         except auth.EmailNotFoundError:
@@ -58,11 +58,11 @@ class AuthTokenResource(Resource):
 
 class LogoutResource(Resource):
     def post(self):
-        login = request.json.get('login')
+        token = request.json.get('token')
         
         try:
             db = firestore.client()
-            db.collection('session token').document(login).delete()
+            db.collection('session token').document(token).delete()
             return {'message': 'User logged out successfully'}, 200
         except auth.InvalidSessionCookieError:
             return {'message': 'Invalid session token.'}, 401
@@ -115,10 +115,10 @@ class InputDataUserResource(Resource):
 
 class GetUserData(Resource):
     def get(self):
-        login = request.json.get('login')
+        token = request.json.get('token')
 
         db = firestore.client()
-        session_ref = db.collection('session token').document(login)
+        session_ref = db.collection('session token').document(token)
         session_data = session_ref.get()
 
         if not session_data.exists:
@@ -163,7 +163,7 @@ class ProcessImage(Resource):
         
 
 api.add_resource(RegisterResource, '/auth/register')
-api.add_resource(AuthTokenResource, '/auth/token')
+api.add_resource(AuthTokenResource, '/auth/login')
 api.add_resource(LogoutResource, '/auth/logout')
 api.add_resource(InputDataUserResource, '/auth/inputdata')
 api.add_resource(GetUserData, '/auth/getdata')
