@@ -3,12 +3,16 @@ from flask_restful import Resource, Api
 import firebase_admin
 from firebase_admin import auth, credentials, firestore
 from google.cloud import storage
+from middleware import authorize_token
+import jwt
 
 app = Flask(__name__)
 api = Api(app)
 
 cred = credentials.Certificate('credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
+
+jwt_secret = 'PEDOTAN'
 
 class RegisterResource(Resource):
     def post(self):
@@ -27,49 +31,65 @@ class RegisterResource(Resource):
         except auth.EmailAlreadyExistsError:
             return {'message': 'Email Already Exists'}, 409
 
+def generate_session_token(user_uid):
+    payload = {
+        'uid': user_uid,
+    }
+    session_token = jwt.encode(payload, jwt_secret, algorithm='HS256')
+    return session_token
+
 class AuthTokenResource(Resource):
-    # GET CUSTOM SESSION TOKEN per user
     def post(self):
         email = request.json.get('email')
 
         try:
             # Authenticate User
             user = auth.get_user_by_email(email)
-            
-            # Create token
-            session_token = auth.create_custom_token(user.uid)
-            token = session_token.decode('utf-8')
 
-            # Create data
-            session_token_doc = {
-                'uid': user.uid,
-                'token': token
-            }
+            # Generate session token
+            session_token = generate_session_token(user.uid)
 
-            # Upload data to firestore
+            # Store the session token in Firestore or any other database
             db = firestore.client()
-            db.collection('session token').document(user.uid).set(session_token_doc)
+            session_token_doc = {
+                'token': session_token
+            }
+            db.collection('session_tokens').document(user.uid).set(session_token_doc)
 
-            return {'token': token}, 200
+            return {'token': session_token}, 200
         except auth.InvalidIdTokenError:
             return {'message': 'Invalid credentials.'}, 401
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
 
-class LogoutResource(Resource):
-    def post(self):
-        email = request.json.get('email')
-        
-        try:
-            user = auth.get_user_by_email(email)
+def authorize_request(func):
+    def wrapper(*args, **kwargs):
+        token = request.headers.get('Authorization')
 
-            db = firestore.client()
-            db.collection('session token').document(user.uid).delete()
-            return {'message': 'User logged out successfully'}, 200
-        except auth.InvalidSessionCookieError:
-            return {'message': 'Invalid session token.'}, 401
-        except auth.EmailNotFoundError:
-            return {'message': 'Email not found.'}, 401
+        if not token or not token.startswith('Bearer '):
+            return jsonify({'message': 'Missing or invalid token'}), 401
+
+        session_token = token.split(' ')[1]
+
+        # Verify and decode the session token
+        try:
+            decoded_token = jwt.decode(session_token, jwt_secret, algorithms=['HS256'])
+            user_uid = decoded_token.get('uid')
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            return jsonify({'message': 'Invalid token'}), 401
+
+        # Check if the session token exists in Firestore or any other database
+        db = firestore.client()
+        session_token_doc = db.collection('session_tokens').document(user_uid).get()
+        if not session_token_doc.exists or session_token_doc.to_dict().get('token') != session_token:
+            return jsonify({'message': 'Invalid token'}), 401
+
+        # Add the user UID to the request context for further use if needed
+        request.user_uid = user_uid
+
+        return func(*args, **kwargs)
+
+    return wrapper
 
 def upload(photo):
     client = storage.Client.from_service_account_json('credentials/pedotanimage_credentials.json')
@@ -85,6 +105,7 @@ def upload(photo):
     return photo_link
 
 class InputDataUserResource(Resource):
+    @authorize_request
     def post(self):
         # Get request data
         name = request.form.get('name')
@@ -120,6 +141,7 @@ class InputDataUserResource(Resource):
             return {'message': 'Email not found.'}, 401
 
 class GetUserData(Resource):
+    @authorize_request
     def get(self):
         email = request.json.get('email')
 
@@ -128,12 +150,6 @@ class GetUserData(Resource):
             user = auth.get_user_by_email(email)
 
             db = firestore.client()
-            session_ref = db.collection('session token').document(user.id)
-            session_data = session_ref.get()
-
-            if not session_data.exists:
-                return 'Invalid session token', 401
-
             user_data = db.collection('user data').document(user.uid).get()
 
             if user_data.exists:
@@ -166,12 +182,9 @@ class ProcessImage(Resource):
             response = request.post
         except:
             pass
-            
-        
 
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/login')
-api.add_resource(LogoutResource, '/auth/logout')
 api.add_resource(InputDataUserResource, '/auth/inputdata')
 api.add_resource(GetUserData, '/auth/getdata')
 
