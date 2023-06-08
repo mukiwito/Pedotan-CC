@@ -48,7 +48,7 @@ class AuthTokenResource(Resource):
 
             # Upload data to firestore
             db = firestore.client()
-            db.collection('session token').document(token).set(session_token_doc)
+            db.collection('session token').document(user.uid).set(session_token_doc)
 
             return {'token': token}, 200
         except auth.InvalidIdTokenError:
@@ -58,14 +58,18 @@ class AuthTokenResource(Resource):
 
 class LogoutResource(Resource):
     def post(self):
-        token = request.json.get('token')
+        email = request.json.get('email')
         
         try:
+            user = auth.get_user_by_email(email)
+
             db = firestore.client()
-            db.collection('session token').document(token).delete()
+            db.collection('session token').document(user.uid).delete()
             return {'message': 'User logged out successfully'}, 200
         except auth.InvalidSessionCookieError:
             return {'message': 'Invalid session token.'}, 401
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
 
 def upload(photo):
     client = storage.Client.from_service_account_json('credentials/pedotanimage_credentials.json')
@@ -115,20 +119,19 @@ class InputDataUserResource(Resource):
 
 class GetUserData(Resource):
     def get(self):
-        token = request.json.get('token')
+        email = request.json.get('token')
 
-        db = firestore.client()
-        session_ref = db.collection('session token').document(token)
-        session_data = session_ref.get()
+        try: 
 
-        if not session_data.exists:
-            return 'Invalid session token', 401
+            user = auth.get_user_by_email(email)
 
-        uid = session_data.to_dict()['uid']
-
-        try:
-            user = auth.get_user(uid)
             db = firestore.client()
+            session_ref = db.collection('session token').document(user.id)
+            session_data = session_ref.get()
+
+            if not session_data.exists:
+                return 'Invalid session token', 401
+
             user_data = db.collection('user data').document(user.uid).get()
 
             if user_data.exists:
