@@ -76,7 +76,7 @@ def upload(photo):
     blob.upload_from_string(photo.read(), content_type=photo.content_type)
     blob.make_public()
 
-    photo_link = blob.public_url
+    photo_link = blob.public_urlQ
     print('Uploaded image link:', photo_link)
 
     return photo_link
