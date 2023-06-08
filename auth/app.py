@@ -42,7 +42,7 @@ class AuthTokenResource(Resource):
 
             # Create data
             session_token_doc = {
-                'uid': user.id,
+                'uid': user.uid,
                 'login': login
             }
 
