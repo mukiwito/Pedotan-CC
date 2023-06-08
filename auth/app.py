@@ -116,10 +116,12 @@ class InputDataUserResource(Resource):
             return {'message': 'User Data Has Been Saved'}, 201
         except auth.InvalidEmailError:
             return {'message': 'Use A Valid Email Address'}, 401
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
 
 class GetUserData(Resource):
     def get(self):
-        email = request.json.get('token')
+        email = request.json.get('email')
 
         try: 
 
@@ -139,7 +141,9 @@ class GetUserData(Resource):
             else:
                 return 'User data not found', 404
         except auth.UserNotFoundError:
-            return 'User not found', 404            
+            return 'User not found', 404
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401          
 
 class ProcessImage(Resource):
     def post(self):
