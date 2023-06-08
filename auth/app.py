@@ -33,12 +33,16 @@ class AuthTokenResource(Resource):
             # Authenticate User
             user = auth.get_user_by_email(email)
             
+            # Create token
             session_token = auth.create_custom_token(user.uid)
             token_data = session_token.decode('utf-8')
 
+            # Create data
             session_token_doc = {
                 'token': token_data
             }
+
+            # Upload data to firestore
             db = firestore.client()
             db.collection('session token').document(user.uid).set(session_token_doc)
 
@@ -51,10 +55,11 @@ class AuthTokenResource(Resource):
 class LogoutResource(Resource):
     def post(self):
         email = request.json.get('email')
-
-        user = auth.get_user_by_email(email)
         
         try:
+            # Get user data
+            user = auth.get_user_by_email(email)    
+            
             # Delete the given token
             db = firestore.client()
             db.collection('session token').document(user.uid).delete()
@@ -66,6 +71,7 @@ class LogoutResource(Resource):
         
 class InputDataUserResource(Resource):
     def post(self):
+        # Get request data
         name = request.json.get('name')
         email = request.json.get('email')
         noHandphone = request.json.get('noHandphone')
@@ -86,18 +92,42 @@ class InputDataUserResource(Resource):
                 'location': location
             }
 
+            # Upload data to firebase
             db = firestore.client()
-            db.collection('email').document(user.uid).set(user_data)
+            db.collection('user data').document(user.uid).set(user_data)
 
             return {'message': 'User Data Has Been Saved'}, 201
         except auth.InvalidEmailError:
             return {'message': 'Use A Valid Email Address'}, 401
+
+class ProcessImage(Resource):
+    def post(self):
+        email = request.json.get('email')
+        session_token = request.json.get('token')
+        image_file = request.files['image']
+        
+        try:
+            # get user data
+            user = auth.get_user_by_email(email)
+
+            db = firestore.client()
+            user_session = db.collection('session token').document(user.uid).get()
+            token_data = user_session.to_dict()['token']
+
+            if not user_session.exists and session_token == token_data:
+                return 'Invalid session token', 401
+
+            ai_endpoint = ''
+            response = request.post
+        except:
+            pass
+            
         
 
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/token')
 api.add_resource(LogoutResource, '/auth/logout')
-api.add_resource(InputDataUserResource, '/auth/data')
+api.add_resource(InputDataUserResource, '/auth/inputdata')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
