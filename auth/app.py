@@ -131,10 +131,12 @@ class GetUserData(Resource):
             db = firestore.client()
             user_data = db.collection('user data').document(user.uid).get()
 
-            return user_data, 200
+            if user_data.exists:
+                return user_data.to_dict(), 200
+            else:
+                return 'User data not found', 404
         except auth.UserNotFoundError:
-            return 'User not found', 404
-            
+            return 'User not found', 404            
 
 class ProcessImage(Resource):
     def post(self):
