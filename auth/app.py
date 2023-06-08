@@ -13,12 +13,14 @@ firebase_admin.initialize_app(cred)
 class RegisterResource(Resource):
     def post(self):
         email = request.json.get('email')
+        username = request.json.get('username')
         password = request.json.get('password')
 
         try:
             # Register User in Firebase
             user = auth.create_user(
                 email=email,
+                display_name=username,
                 password=password
             )
             return {'message': 'User Created Successfully'}, 201
@@ -36,18 +38,19 @@ class AuthTokenResource(Resource):
             
             # Create token
             session_token = auth.create_custom_token(user.uid)
-            token_data = session_token.decode('utf-8')
+            login = session_token.decode('utf-8')
 
             # Create data
             session_token_doc = {
-                'token': token_data
+                'uid': user.id,
+                'login': login
             }
 
             # Upload data to firestore
             db = firestore.client()
-            db.collection('session token').document(user.uid).set(session_token_doc)
+            db.collection('session token').document(login).set(session_token_doc)
 
-            return {'token': token_data}, 200
+            return {'login': login}, 200
         except auth.InvalidIdTokenError:
             return {'message': 'Invalid credentials.'}, 401
         except auth.EmailNotFoundError:
@@ -55,20 +58,14 @@ class AuthTokenResource(Resource):
 
 class LogoutResource(Resource):
     def post(self):
-        email = request.json.get('email')
+        login = request.json.get('login')
         
         try:
-            # Get user data
-            user = auth.get_user_by_email(email)    
-            
-            # Delete the given token
             db = firestore.client()
-            db.collection('session token').document(user.uid).delete()
+            db.collection('session token').document(login).delete()
             return {'message': 'User logged out successfully'}, 200
         except auth.InvalidSessionCookieError:
             return {'message': 'Invalid session token.'}, 401
-        except auth.EmailNotFoundError:
-            return {'message': 'Email not found.'}, 401
 
 def upload(photo):
     client = storage.Client.from_service_account_json('credentials/pedotanimage_credentials.json')
@@ -90,14 +87,13 @@ class InputDataUserResource(Resource):
         email = request.form.get('email')
         noHandphone = request.form.get('noHandphone')
         nik = request.form.get('nik')
-        photo = request.files.get('photo') #upload ke google cloud
+        photo = request.files.get('photo')
         location = request.form.get('location')
 
         photo_link = upload(photo)
         print(photo_link)
 
         try:
-
             user = auth.get_user_by_email(email)
             
             user_data = {
@@ -116,6 +112,29 @@ class InputDataUserResource(Resource):
             return {'message': 'User Data Has Been Saved'}, 201
         except auth.InvalidEmailError:
             return {'message': 'Use A Valid Email Address'}, 401
+
+class GetUserData(Resource):
+    def get(self):
+        login = request.json.get('login')
+
+        db = firestore.client()
+        session_ref = db.collection('session token').document(login)
+        session_data = session_ref.get()
+
+        if not session_data.exists:
+            return 'Invalid session token', 401
+
+        uid = session_data.to_dict()['uid']
+
+        try:
+            user = auth.get_user(uid)
+            db = firestore.client()
+            user_data = db.collection('user data').document(user.uid).get()
+
+            return user_data, 200
+        except auth.UserNotFoundError:
+            return 'User not found', 404
+            
 
 class ProcessImage(Resource):
     def post(self):
@@ -145,6 +164,8 @@ api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/token')
 api.add_resource(LogoutResource, '/auth/logout')
 api.add_resource(InputDataUserResource, '/auth/inputdata')
+api.add_resource(GetUserData, '/auth/getdata')
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
