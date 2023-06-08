@@ -6,11 +6,12 @@ from keras.models import load_model
 from tensorflow.keras.utils import load_img, img_to_array
 from io import BytesIO
 import requests  # move requests to the end of the imports
+from google.cloud import storage
 
 app = Flask(__name__)
 api = Api(app)
 
-model = load_model('model/model2.h5')
+#model = load_model('model/model2.h5')
 
 disease_class = ["Apple__black_rot",
 "Apple__healthy"
@@ -63,10 +64,30 @@ def preprocess_image(url):
     return image
 
 def get_predicted_label(pred_probabilities):
-    """
-    Turns an array of predictions probabilities into a label
-    """
+    # Turns an array of predictions probabilities into a label
+
     return disease_class[pred_probabilities.argmax()]
+    
+def upload(photo):
+    client = storage.Client.from_service_account_json('auth/credentials/pedotanimage_credentials.json')
+    bucket = client.get_bucket('pedotanimage')
+    blob = bucket.blob(photo.filename)
+
+    blob.upload_from_string(photo.read(), content_type=photo.content_type)
+    blob.make_public()
+
+    photo_link = blob.public_url
+    print('Uploaded image link:', photo_link)
+
+    return photo_link
+
+class InputPlantPhoto(Resource):
+    def post(self):
+        # Get request data
+        photo = request.files.get('photo')
+
+        url = upload(photo)
+        return url
 
 class PredictPlantDisease(Resource):
     def predict():
@@ -85,5 +106,6 @@ class PredictPlantDisease(Resource):
             else :
                 pred_class = "sehat"
             return {'predict': pred_class}, 200
-
+            
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
+api.add_resource(InputPlantPhoto, '/auth/inputphotodisease')
