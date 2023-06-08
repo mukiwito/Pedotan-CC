@@ -7,7 +7,7 @@ from google.cloud import storage
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
+cred = credentials.Certificate('credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 class RegisterResource(Resource):
@@ -71,7 +71,7 @@ class LogoutResource(Resource):
             return {'message': 'Email not found.'}, 401
 
 def upload(photo):
-    client = storage.Client.from_service_account_json('auth/credentials/pedotanimage_credentials.json')
+    client = storage.Client.from_service_account_json('credentials/pedotanimage_credentials.json')
     bucket = client.get_bucket('pedotanimage')
     blob = bucket.blob(photo.filename)
 
