@@ -1,3 +1,5 @@
 flask==2.0.1
 flask-restful==0.3.9
 firebase-admin==5.1.0
+google-cloud-storage
+PyJWT
