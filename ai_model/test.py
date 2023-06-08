@@ -1,20 +1,28 @@
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.utils import load_img, img_to_array
+from keras.models import load_model
 
-new_model = tf.keras.models.load_model(filepath="content/my_model_final_v2.h5")
+# app = Flask(__name__)
+# api = Api(app)
 
-uploaded = "content/ikan.jpg"
+model = load_model('ai_model\content\crop_predNew.h5')
 
-# predicting image
-path = uploaded
-img = load_img(path, target_size=(150, 150))
+komoditas_class = ['apple', 'coffee', 'grapes', 'corn', 'rice']
 
-x = img_to_array(img)
-x /= 255
-x = np.expand_dims(x, axis=0)
-images = np.vstack([x])
 
-classes = new_model.predict(images, batch_size=5)
+new_data = [[90, 42, 43, 20.879744,	82.002744, 6.502985, 202.935536]]
 
-print(classes)
+def get_predicted_label_komoditas(pred_probabilities):
+    """
+    Turns an array of predictions probabilities into a label
+    """
+    return komoditas_class[pred_probabilities.argmax()]
+
+def predict_komoditas():
+    data = new_data
+    pred = model.predict(data)
+    max_pred = max(pred[0])
+    pred_class = get_predicted_label_komoditas(pred[0])
+    print(max_pred)
+    print(pred_class)
+    return {'predict': pred_class}, 200
+
+predict_komoditas()
