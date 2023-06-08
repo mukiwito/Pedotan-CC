@@ -1,12 +1,13 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 import firebase_admin
 from firebase_admin import auth, credentials, firestore
+from google.cloud import storage
 
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('credentials/firebase_credentials.json')
+cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 class RegisterResource(Resource):
@@ -68,16 +69,32 @@ class LogoutResource(Resource):
             return {'message': 'Invalid session token.'}, 401
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
-        
+
+def upload(photo):
+    client = storage.Client.from_service_account_json('auth/credentials/pedotanimage_credentials.json')
+    bucket = client.get_bucket('pedotanimage')
+    blob = bucket.blob(photo.filename)
+
+    blob.upload_from_string(photo.read(), content_type=photo.content_type)
+    blob.make_public()
+
+    photo_link = blob.public_url
+    print('Uploaded image link:', photo_link)
+
+    return photo_link
+
 class InputDataUserResource(Resource):
     def post(self):
         # Get request data
-        name = request.json.get('name')
-        email = request.json.get('email')
-        noHandphone = request.json.get('noHandphone')
-        nik = request.json.get('nik')
-        photo = request.json.get('photo') #upload ke google cloud
-        location = request.json.get('location')
+        name = request.form.get('name')
+        email = request.form.get('email')
+        noHandphone = request.form.get('noHandphone')
+        nik = request.form.get('nik')
+        photo = request.files.get('photo') #upload ke google cloud
+        location = request.form.get('location')
+
+        photo_link = upload(photo)
+        print(photo_link)
 
         try:
 
@@ -88,7 +105,7 @@ class InputDataUserResource(Resource):
                 'email': email,
                 'noHandphone': noHandphone,
                 'nik': nik,
-                'photo': photo,
+                'photo': photo_link,
                 'location': location
             }
 
