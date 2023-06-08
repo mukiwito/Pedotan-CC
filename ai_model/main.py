@@ -11,7 +11,7 @@ from google.cloud import storage
 app = Flask(__name__)
 api = Api(app)
 
-#model = load_model('model/model2.h5')
+model = load_model('model/model2.h5')
 
 disease_class = ["Apple__black_rot",
 "Apple__healthy"
@@ -91,6 +91,7 @@ class InputPlantPhoto(Resource):
 
 class PredictPlantDisease(Resource):
     def predict():
+        
         if 'url' not in request.json:
             return jsonify({'error': 'No image URL in the request'}), 400
         url = request.json['url']
