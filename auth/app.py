@@ -16,18 +16,18 @@ jwt_secret = 'PEDOTAN'
 class RegisterResource(Resource):
     def post(self):
         email = request.json.get('email')
-        username = request.json.get('username')
+        name = request.json.get('name')
         password = request.json.get('password')
 
         try:
             # Register User in Firebase
             user = auth.create_user(
                 email=email,
-                display_name=username,
+                display_name=name,
                 password=password
             )
             db = firestore.client()
-            db.collection('user data').document(user.uid).set({'email' : email, 'username': username})
+            db.collection('user data').document(user.uid).set({'email' : email, 'name': name})
 
             return {'message': 'User Created Successfully'}, 201
         except auth.EmailAlreadyExistsError:
@@ -36,11 +36,11 @@ class RegisterResource(Resource):
 class RegisterGoogleResource(Resource):
     def post(self):
         email = request.json.get('email')
-        username = request.json.get('username')
+        name = request.json.get('name')
         try:
             user = auth.get_user_by_email(email)
             db = firestore.client()
-            db.collection('user data').document(user.uid).set({'email' : email, 'username': username})
+            db.collection('user data').document(user.uid).set({'email' : email, 'name': name})
             return {'message': 'User Created Successfully'}, 201
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401        
@@ -156,7 +156,6 @@ class DataUserResource(Resource):
             
             user_data = {
                 'name': name,
-                'email': email,
                 'noHandphone': noHandphone,
                 'nik': nik,
                 'photo': photo_link,
