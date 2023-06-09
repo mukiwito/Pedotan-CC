@@ -8,7 +8,7 @@ import jwt
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('credentials/firebase_credentials.json')
+cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 jwt_secret = 'PEDOTAN'
@@ -158,12 +158,41 @@ class GetUserData(Resource):
         except auth.UserNotFoundError:
             return 'User not found', 404
         except auth.EmailNotFoundError:
-            return {'message': 'Email not found.'}, 401          
+            return {'message': 'Email not found.'}, 401   
+
+class InputDataKebunResource(Resource):
+    def post(self):
+        # Get request data
+        email = request.json.get('email')
+        commodity = request.json.get('komoditas')
+        location = request.json.get('lokasi')   
+        area = request.json.get('luas')
+        status = "baik"
+
+        try:
+            user = auth.get_user_by_email(email)
+            
+            data_kebun = {
+                'email': email,
+                'commodity': commodity,
+                'location': location,
+                'area': area,
+                'status': status
+            }
+
+            # Upload data to firebase
+            db = firestore.client()
+            db.collection('data kebun').document(user.uid).set(data_kebun)
+        
+            return {'message': 'Data Kebun Has Been Saved'}, 201
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401  
 
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/login')
 api.add_resource(InputDataUserResource, '/auth/inputdata')
 api.add_resource(GetUserData, '/auth/getdata')
+api.add_resource(InputDataKebunResource, '/auth/inputdatakebun')
 
 
 if __name__ == '__main__':
