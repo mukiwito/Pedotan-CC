@@ -81,17 +81,11 @@ def upload(photo):
 
     return photo_link
 
-class InputPlantPhoto(Resource):
-    def post(self):
-        # Get request data
-        photo = request.files.get('photo')
-
-        url = upload(photo)
-        return url
-
 class PredictPlantDisease(Resource):
     def predict():
-        
+        photo = request.files.get('photo')
+        url = upload(photo)
+
         if 'url' not in request.json:
             return jsonify({'error': 'No image URL in the request'}), 400
         url = request.json['url']
@@ -109,4 +103,3 @@ class PredictPlantDisease(Resource):
             return {'predict': pred_class}, 200
             
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
-api.add_resource(InputPlantPhoto, '/auth/inputphotodisease')

@@ -3,7 +3,7 @@ from flask_restful import Resource, Api
 import firebase_admin
 from firebase_admin import auth, credentials, firestore
 from google.cloud import storage
-import jwt
+from jwt import jwt
 
 app = Flask(__name__)
 api = Api(app)
