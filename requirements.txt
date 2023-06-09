@@ -6,4 +6,4 @@ Pillow==8.2.0
 Keras==2.6.0
 tensorflow==2.6.0
 requests==2.26.0
-google-cloud-storage==1.45.0
+google-cloud-storage==1.41.0
