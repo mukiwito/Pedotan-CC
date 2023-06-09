@@ -1,13 +1,16 @@
+import sys
+sys.path.append('./')
+
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from PIL import Image
 import numpy as np
-import tensorflow as tf
 from keras.models import load_model
-from tensorflow.keras.utils import load_img, img_to_array
+from tensorflow.keras.utils import img_to_array
 from io import BytesIO
-import requests  # move requests to the end of the imports
+import requests 
 from google.cloud import storage
+from auth.app import authorize_request
 
 app = Flask(__name__)
 api = Api(app)
@@ -70,7 +73,7 @@ def get_predicted_label_disease(pred_probabilities):
     return disease_class[pred_probabilities.argmax()]
     
 def upload(photo):
-    client = storage.Client.from_service_account_json('auth/credentials/pedotanimage_credentials.json')
+    client = storage.Client.from_service_account_json('./auth/credentials/pedotanimage_credentials.json')
     bucket = client.get_bucket('pedotanimage')
     blob = bucket.blob(photo.filename)
 
@@ -83,7 +86,10 @@ def upload(photo):
     return photo_link
 
 class PredictPlantDisease(Resource):
+    #@authorize_request
     def post(self):
+        email = request.json.get('email')
+
         if 'image' not in request.files:
             return jsonify({'error': 'No image found in the request'}), 401
         

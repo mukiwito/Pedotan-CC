@@ -4,11 +4,12 @@ import firebase_admin
 from firebase_admin import auth, credentials, firestore
 from google.cloud import storage
 import jwt
+from jwt import encode
 
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
+cred = credentials.Certificate('credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 jwt_secret = 'PEDOTAN'
@@ -34,7 +35,7 @@ def generate_session_token(user_uid):
     payload = {
         'uid': user_uid,
     }
-    session_token = jwt.encode(payload, jwt_secret, algorithm='HS256')
+    session_token = encode(payload, jwt_secret, algorithm='HS256')
     return session_token
 
 class AuthTokenResource(Resource):
@@ -103,6 +104,23 @@ def upload(photo):
 
     return photo_link
 
+class LogoutResource(Resource):
+    @authorize_request
+    def post(self):
+        email = request.json.get('email')
+
+        try:
+            # Get user data
+            user = auth.get_user_by_email(email)    
+
+            # Delete the given token
+            db = firestore.client()
+            db.collection('session_tokens').document(user.uid).delete()
+
+            return {'message': 'Logout successful'}, 200
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
+
 class InputDataUserResource(Resource):
     @authorize_request
     def post(self):
@@ -161,6 +179,7 @@ class GetUserData(Resource):
             return {'message': 'Email not found.'}, 401   
 
 class InputDataKebunResource(Resource):
+    @authorize_request
     def post(self):
         # Get request data
         email = request.json.get('email')
@@ -193,7 +212,7 @@ api.add_resource(AuthTokenResource, '/auth/login')
 api.add_resource(InputDataUserResource, '/auth/inputdata')
 api.add_resource(GetUserData, '/auth/getdata')
 api.add_resource(InputDataKebunResource, '/auth/inputdatakebun')
-
+api.add_resource(LogoutResource, '/auth/logout')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
