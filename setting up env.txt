@@ -1,0 +1,7 @@
+sudo apt update
+sudo apt install git
+git clone https://github.com/mukiwito/Pedotan-CC.git
+sudo apt-get install python3-pip
+pip3 install flask flask-restful firebase-admin google-cloud-storage PyJWT
+cd Pedotan-CC/auth
+python3 app.py

@@ -8,7 +8,7 @@ import jwt
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('credentials/firebase_credentials.json')
+cred = credentials.Certificate('./auth/credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 jwt_secret = 'PEDOTAN'
@@ -91,7 +91,7 @@ def authorize_request(func):
     return wrapper
 
 def upload(photo):
-    client = storage.Client.from_service_account_json('credentials/pedotanimage_credentials.json')
+    client = storage.Client.from_service_account_json('./auth/credentials/pedotanimage_credentials.json')
     bucket = client.get_bucket('pedotanimage')
     blob = bucket.blob(photo.filename)
 
@@ -102,6 +102,7 @@ def upload(photo):
     print('Uploaded image link:', photo_link)
 
     return photo_link
+
 
 class LogoutResource(Resource):
     @authorize_request
@@ -120,7 +121,8 @@ class LogoutResource(Resource):
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
 
-class InputDataUserResource(Resource):
+
+class DataUserResource(Resource):
     @authorize_request
     def post(self):
         # Get request data
@@ -155,14 +157,12 @@ class InputDataUserResource(Resource):
             return {'message': 'Use A Valid Email Address'}, 401
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
-
-class GetUserData(Resource):
+    
     @authorize_request
     def get(self):
-        email = request.json.get('email')
+        email = request.args.get('email')
 
         try: 
-
             user = auth.get_user_by_email(email)
 
             db = firestore.client()
@@ -177,7 +177,8 @@ class GetUserData(Resource):
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401   
 
-class InputDataKebunResource(Resource):
+
+class DataKebunResource(Resource):
     @authorize_request
     def post(self):
         # Get request data
@@ -204,13 +205,33 @@ class InputDataKebunResource(Resource):
         
             return {'message': 'Data Kebun Has Been Saved'}, 201
         except auth.EmailNotFoundError:
-            return {'message': 'Email not found.'}, 401  
+            return {'message': 'Email not found.'}, 401
+    
+
+    @authorize_request
+    def get(self):
+        email = request.args.get('email')
+
+        try: 
+
+            user = auth.get_user_by_email(email)
+
+            db = firestore.client()
+            user_data = db.collection('data kebun').document(user.uid).get()
+
+            if user_data.exists:
+                return user_data.to_dict(), 200
+            else:
+                return 'User data not found', 404
+        except auth.UserNotFoundError:
+            return 'User not found', 404
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401 
 
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/login')
-api.add_resource(InputDataUserResource, '/auth/inputdata')
-api.add_resource(GetUserData, '/auth/getdata')
-api.add_resource(InputDataKebunResource, '/auth/inputdatakebun')
+api.add_resource(DataUserResource, '/auth/datauser')
+api.add_resource(DataKebunResource, '/auth/datakebun')
 api.add_resource(LogoutResource, '/auth/logout')
 
 if __name__ == '__main__':
