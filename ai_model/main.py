@@ -12,7 +12,8 @@ from google.cloud import storage
 app = Flask(__name__)
 api = Api(app)
 
-model = load_model("model/model2.h5")
+model1 = load_model("ai_model/model/model1.h5")
+model2 = load_model("C:/Users/Dzaki Putranto/Downloads/model2.h5")
 
 disease_class = ["Apple__black_rot",
 "Apple__healthy"
@@ -63,7 +64,7 @@ def preprocess_image(url):
 
     return image
 
-def get_predicted_label(pred_probabilities):
+def get_predicted_label_disease(pred_probabilities):
     # Turns an array of predictions probabilities into a label
 
     return disease_class[pred_probabilities.argmax()]
@@ -90,21 +91,47 @@ class PredictPlantDisease(Resource):
         url = upload(image)
 
         image = preprocess_image(url)
-        pred = model.predict(image)
+        pred = model2.predict(image)
         max_pred = max(pred[0])
         if max_pred > 0.5:
-            pred_class = get_predicted_label(pred[0])
+            pred_class = get_predicted_label_disease(pred[0])
         else :
             pred_class = "sehat"
         return {'predict': pred_class}, 200
-    
-class PredictCropComudity(Resource):
+
+komoditas_class = ['apple', 
+                   'coffee', 
+                   'grapes', 
+                   'corn', 
+                   'rice']
+
+def get_predicted_label_commodity(pred_probabilities):
+    """
+    Turns an array of predictions probabilities into a label
+    """
+    return komoditas_class[pred_probabilities.argmax()]
+
+
+class PredictCropCommodity(Resource):
     def post(self):
-        if request.json.get('email'):
-            pass
+        json_data = request.json
+        
+        model_data = [
+            [json_data['n'], 
+             json_data['p'], 
+             json_data['k'], 
+             json_data['temperature'], 
+             json_data['humidity'], 
+             json_data['ph'], 
+             json_data['rainfall']]
+        ]
+        
+        pred = model1.predict(model_data)
+        pred_class = get_predicted_label_commodity(pred[0])
+        return {'predict': pred_class}, 200
             
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
-api.add_resource(PredictCropComudity, '/ai/predictdisease')
+api.add_resource(PredictCropCommodity, '/ai/predictcrop')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
