@@ -4,7 +4,6 @@ import firebase_admin
 from firebase_admin import auth, credentials, firestore
 from google.cloud import storage
 import jwt
-from jwt import encode
 
 app = Flask(__name__)
 api = Api(app)
@@ -35,7 +34,7 @@ def generate_session_token(user_uid):
     payload = {
         'uid': user_uid,
     }
-    session_token = encode(payload, jwt_secret, algorithm='HS256')
+    session_token = jwt.encode(payload, jwt_secret, algorithm='HS256')
     return session_token
 
 class AuthTokenResource(Resource):
