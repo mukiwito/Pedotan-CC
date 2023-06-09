@@ -182,9 +182,9 @@ class InputDataKebunResource(Resource):
     def post(self):
         # Get request data
         email = request.json.get('email')
-        commodity = request.json.get('komoditas')
-        location = request.json.get('lokasi')   
-        area = request.json.get('luas')
+        commodity = request.json.get('commodity')
+        location = request.json.get('location')   
+        area = request.json.get('area')
         status = "baik"
 
         try:
