@@ -27,11 +27,23 @@ class RegisterResource(Resource):
                 password=password
             )
             db = firestore.client()
-            db.collection('user data').document(user.uid).set({'email' : email, 'display name': username})
+            db.collection('user data').document(user.uid).set({'email' : email, 'username': username})
 
             return {'message': 'User Created Successfully'}, 201
         except auth.EmailAlreadyExistsError:
             return {'message': 'Email Already Exists'}, 409
+
+class RegisterGoogleResource(Resource):
+    def post(self):
+        email = request.json.get('email')
+        username = request.json.get('username')
+        try:
+            user = auth.get_user_by_email(email)
+            db = firestore.client()
+            db.collection('user data').document(user.uid).set({'email' : email, 'username': username})
+            return {'message': 'User Created Successfully'}, 201
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401        
 
 def generate_session_token(user_uid):
     payload = {
@@ -230,6 +242,7 @@ class DataKebunResource(Resource):
             return {'message': 'Email not found.'}, 401 
 
 api.add_resource(RegisterResource, '/auth/register')
+api.add_resource(RegisterGoogleResource, '/auth/google')
 api.add_resource(AuthTokenResource, '/auth/login')
 api.add_resource(DataUserResource, '/auth/datauser')
 api.add_resource(DataKebunResource, '/auth/datakebun')
