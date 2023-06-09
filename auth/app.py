@@ -8,7 +8,7 @@ import jwt
 app = Flask(__name__)
 api = Api(app)
 
-cred = credentials.Certificate('credentials/firebase_credentials.json')
+cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
 firebase_admin.initialize_app(cred)
 
 jwt_secret = 'PEDOTAN'
@@ -26,6 +26,9 @@ class RegisterResource(Resource):
                 display_name=username,
                 password=password
             )
+            db = firestore.client()
+            db.collection('user data').document(user.uid).set({'email' : email, 'display name': username})
+            
             return {'message': 'User Created Successfully'}, 201
         except auth.EmailAlreadyExistsError:
             return {'message': 'Email Already Exists'}, 409
@@ -91,7 +94,7 @@ def authorize_request(func):
     return wrapper
 
 def upload(photo):
-    client = storage.Client.from_service_account_json('credentials/pedotanimage_credentials.json')
+    client = storage.Client.from_service_account_json('authcredentials/pedotanimage_credentials.json')
     bucket = client.get_bucket('pedotanimage')
     blob = bucket.blob(photo.filename)
 
@@ -150,7 +153,7 @@ class DataUserResource(Resource):
 
             # Upload data to firebase
             db = firestore.client()
-            db.collection('user data').document(user.uid).set(user_data)
+            db.collection('user data').document(user.uid).update(user_data)
 
             return {'message': 'User Data Has Been Saved'}, 201
         except auth.InvalidEmailError:
