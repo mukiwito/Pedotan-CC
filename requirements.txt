@@ -4,6 +4,5 @@ PyJWT==2.3.0
 Flask==2.0.1
 Pillow==8.2.0
 Keras==2.6.0
-tensorflow
 requests==2.26.0
 google-cloud-storage
