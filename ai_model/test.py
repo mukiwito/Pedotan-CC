@@ -3,12 +3,23 @@ from keras.models import load_model
 # app = Flask(__name__)
 # api = Api(app)
 
-model = load_model('ai_model\content\crop_predNew.h5')
+model = load_model('ai_model\model\model1.h5')
 
 komoditas_class = ['apple', 'coffee', 'grapes', 'corn', 'rice']
 
+json_data = {
+    "n": 90, 
+    "p": 42, 
+    "k": 43, 
+    "temperature": 20.879744, 
+    "humidity":	82.002744, 
+    "ph": 6.502985,
+    "rainfall": 202.935536
+    }
 
-new_data = [[90, 42, 43, 20.879744,	82.002744, 6.502985, 202.935536]]
+new_data = [
+    [json_data['n'], json_data['p'], json_data['k'], json_data['temperature'], json_data['humidity'], json_data['ph'], json_data['rainfall']]
+]
 
 def get_predicted_label_komoditas(pred_probabilities):
     """

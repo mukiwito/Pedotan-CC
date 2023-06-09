@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from PIL import Image
 import numpy as np
+import tensorflow as tf
 from keras.models import load_model
 from tensorflow.keras.utils import load_img, img_to_array
 from io import BytesIO
@@ -11,7 +12,7 @@ from google.cloud import storage
 app = Flask(__name__)
 api = Api(app)
 
-model = load_model('model/model2.h5')
+model = load_model("model/model2.h5")
 
 disease_class = ["Apple__black_rot",
 "Apple__healthy"
@@ -53,10 +54,9 @@ disease_class = ["Apple__black_rot",
 def preprocess_image(url):
     res = requests.get(url).content
     img = Image.open(BytesIO(res)).convert('RGB')
+    img = img.resize((224, 224))
 
-    img_resized = img.resize((224, 224))
-
-    image = img_to_array(img_resized)
+    image = img_to_array(img)
     image /= 255
     image = np.expand_dims(image, axis = 0)
     image = np.vstack([image])
@@ -76,30 +76,35 @@ def upload(photo):
     blob.upload_from_string(photo.read(), content_type=photo.content_type)
     blob.make_public()
 
-    photo_link = blob.public_urlQ
+    photo_link = blob.public_url
     print('Uploaded image link:', photo_link)
 
     return photo_link
 
 class PredictPlantDisease(Resource):
-    def predict():
-        photo = request.files.get('photo')
-        url = upload(photo)
+    def post(self):
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image found in the request'}), 401
+        
+        image = request.files['image']
+        url = upload(image)
 
-        if 'url' not in request.json:
-            return jsonify({'error': 'No image URL in the request'}), 400
-        url = request.json['url']
-        if url == '':
-            return jsonify({'error': 'No image URL provided'}), 400
-        else:
-            url = request.json('url')
-            image = preprocess_image("ai_model/content/tomat.jpg")
-            pred = model.predict(image)
-            max_pred = max(pred[0])
-            if max_pred > 0.5:
-                pred_class = get_predicted_label(pred[0])
-            else :
-                pred_class = "sehat"
-            return {'predict': pred_class}, 200
+        image = preprocess_image(url)
+        pred = model.predict(image)
+        max_pred = max(pred[0])
+        if max_pred > 0.5:
+            pred_class = get_predicted_label(pred[0])
+        else :
+            pred_class = "sehat"
+        return {'predict': pred_class}, 200
+    
+class PredictCropComudity(Resource):
+    def post(self):
+        if request.json.get('email'):
+            pass
             
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
+api.add_resource(PredictCropComudity, '/ai/predictdisease')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', debug=True)

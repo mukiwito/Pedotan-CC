@@ -160,28 +160,6 @@ class GetUserData(Resource):
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401          
 
-class ProcessImage(Resource):
-    def post(self):
-        email = request.json.get('email')
-        session_token = request.json.get('token')
-        image_file = request.files['image']
-        
-        try:
-            # get user data
-            user = auth.get_user_by_email(email)
-
-            db = firestore.client()
-            user_session = db.collection('session token').document(user.uid).get()
-            token_data = user_session.to_dict()['token']
-
-            if not user_session.exists and session_token == token_data:
-                return 'Invalid session token', 401
-
-            ai_endpoint = ''
-            response = request.post
-        except:
-            pass
-
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(AuthTokenResource, '/auth/login')
 api.add_resource(InputDataUserResource, '/auth/inputdata')

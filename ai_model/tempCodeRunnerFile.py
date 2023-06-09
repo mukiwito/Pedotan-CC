@@ -1,2 +1,2 @@
-app = Flask(__name__)
-# api = Api(app)
+
+        url = upload(image)
