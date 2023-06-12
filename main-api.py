@@ -334,6 +334,8 @@ class PredictPlantDisease(Resource):
                     data_model1 = data_kebun.get('model1')
                     if komoditas != data_model1:
                         db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+                    else:
+                        db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
             else :
                 pred_class = "sehat"
             

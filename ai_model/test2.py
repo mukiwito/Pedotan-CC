@@ -9,7 +9,7 @@ import requests  # move requests to the end of the imports
 from google.cloud import storage
 
 
-model = load_model('ai_model/content/leaf_nutrient_tuned.h5')
+model = load_model('ai_model/model/model3.h5')
 
 disease_class = ['Nitrogen(N)', 'Phosphorus(P)', 'Potassium(K)']
 
