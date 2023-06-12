@@ -41,9 +41,18 @@ def predict():
         pred_class = get_predicted_label(pred[0])
     else :
         pred_class = "sehat"
-
+    
+    print(pred)
     print(max_pred)
     print(pred_class)
+    if pred_class == "Nitrogen(N)":
+        print ("N = 20")
+    elif pred_class == "Phosphorus(P)":
+        print ("P = 20")
+    elif pred_class == "Potassium(K)":
+        print ("K = 20")
+    else:
+        print("20,20,20")
     return {'predict': pred_class}, 200
 
 predict()
