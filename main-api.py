@@ -425,11 +425,22 @@ class PredictCropCommodity(Resource):
             
             data_kebun = db.collection('data kebun').document(user.uid).get()
             komoditas = data_kebun.get('commodity')
-            if komoditas != pred_class:
-                if 'model2' not in data_kebun.to_dict():
+            # if komoditas != pred_class:
+            #     if 'model2' not in data_kebun.to_dict():
+            #         db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
+            #     else:
+            #         db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+            if 'model2' not in data_kebun.to_dict():
+                if komoditas != pred_class:
                     db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
                 else:
+                    db.collection('data kebun').document(user.uid).update({'status': "baik"})
+            else:
+                if komoditas != pred_class:
                     db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+                else:
+                    db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
+            
             return {'predict': pred_class}, 200
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
