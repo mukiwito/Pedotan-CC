@@ -11,27 +11,33 @@ from tensorflow.keras.utils import img_to_array
 from io import BytesIO
 import requests 
 
-app = Flask(__name__)
+app = Flask(__name__) # Flask
 api = Api(app)
 
-cred = credentials.Certificate('auth/credentials/firebase_credentials.json')
-firebase_admin.initialize_app(cred)
+cred = credentials.Certificate('auth/credentials/firebase_credentials.json') # Import firebase Credentials
+firebase_admin.initialize_app(cred) # Initializing firebase admin
 
+# Custom JWT Secret Key
 jwt_secret = 'PEDOTAN'
 
 class RegisterResource(Resource):
     def post(self):
+        # Register for user using email and password
+
+        # Fetch request data
         email = request.json.get('email')
         name = request.json.get('name')
         password = request.json.get('password')
 
         try:
-            # Register User in Firebase
+            # Register User in firebase
             user = auth.create_user(
                 email=email,
                 display_name=name,
                 password=password
             )
+
+            # Save default user data in firestore (user data) collection
             db = firestore.client()
             db.collection('user data').document(user.uid).set({'email' : email, 'name': name})
 
@@ -41,17 +47,26 @@ class RegisterResource(Resource):
 
 class RegisterGoogleResource(Resource):
     def post(self):
+        # Register for user using Google provider
+
+        # Fetch request data
         email = request.json.get('email')
         name = request.json.get('name')
+
         try:
+            # Get user data from firebase admin
             user = auth.get_user_by_email(email)
+
+            #save default user data in firestore (user data) collection
             db = firestore.client()
             db.collection('user data').document(user.uid).set({'email' : email, 'name': name})
+
             return {'message': 'User Created Successfully'}, 201
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401        
 
 def generate_session_token(user_uid):
+    # Generate session token using JWT module and custom secret key
     payload = {
         'uid': user_uid,
     }
@@ -60,6 +75,9 @@ def generate_session_token(user_uid):
 
 class AuthTokenResource(Resource):
     def post(self):
+        # Generate session token for user
+
+        # Fetch request data
         email = request.json.get('email')
 
         try:
@@ -69,7 +87,7 @@ class AuthTokenResource(Resource):
             # Generate session token
             session_token = generate_session_token(user.uid)
 
-            # Store the session token in Firestore or any other database
+            # Store the session token in firestore (session_tokens) collection
             db = firestore.client()
             session_token_doc = {
                 'token': session_token
@@ -83,6 +101,7 @@ class AuthTokenResource(Resource):
             return {'message': 'Email not found.'}, 401
 
 def authorize_request(func):
+    # Authenticate user request
     def wrapper(*args, **kwargs):
         token = request.headers.get('Authorization')
 
@@ -112,6 +131,7 @@ def authorize_request(func):
     return wrapper
 
 def upload(photo):
+    # Upload Image file to Cloud Bucket and return a public link for the image uploaded
     client = storage.Client.from_service_account_json('auth/credentials/pedotanimage_credentials.json')
     bucket = client.get_bucket('pedotanimage')
     blob = bucket.blob(photo.filename)
@@ -128,13 +148,16 @@ def upload(photo):
 class LogoutResource(Resource):
     @authorize_request
     def post(self):
+        # User Logout, user need an authorized request to logout
+
+        # Fetch request data
         email = request.json.get('email')
 
         try:
             # Get user data
             user = auth.get_user_by_email(email)    
 
-            # Delete the given token
+            # Delete the session token from firestore database
             db = firestore.client()
             db.collection('session_tokens').document(user.uid).delete()
 
@@ -146,7 +169,9 @@ class LogoutResource(Resource):
 class DataUserResource(Resource):
     @authorize_request
     def post(self):
-        # Get request data
+        # Input data user to firestore database
+
+        # Get request data (form-type)
         name = request.form.get('name')
         email = request.form.get('email')
         noHandphone = request.form.get('noHandphone')
@@ -154,10 +179,12 @@ class DataUserResource(Resource):
         photo = request.files.get('photo')
         location = request.form.get('location')
 
+        # Upload image to get image link
         photo_link = upload(photo)
         print(photo_link)
 
         try:
+            # Get user data
             user = auth.get_user_by_email(email)
             
             user_data = {
@@ -168,7 +195,7 @@ class DataUserResource(Resource):
                 'location': location
             }
 
-            # Upload data to firebase
+            # Upload user data to firestore database
             db = firestore.client()
             db.collection('user data').document(user.uid).update(user_data)
 
@@ -178,11 +205,16 @@ class DataUserResource(Resource):
     
     @authorize_request
     def get(self):
+        # Get user data from firestore database
+
+        # Get request data from query
         email = request.args.get('email')
 
         try: 
+            # Get user data from firebase admin
             user = auth.get_user_by_email(email)
-
+            
+            # Get a full user data saved in firestore database
             db = firestore.client()
             user_data = db.collection('user data').document(user.uid).get()
 
@@ -199,7 +231,9 @@ class DataUserResource(Resource):
 class DataKebunResource(Resource):
     @authorize_request
     def post(self):
-        # Get request data
+        # Input Data Kebun to firestore database
+
+        # Get request data (JSON)
         email = request.json.get('email')
         commodity = request.json.get('commodity')
         location = request.json.get('location')   
@@ -207,8 +241,10 @@ class DataKebunResource(Resource):
         status = "baik"
 
         try:
+            # Get user data
             user = auth.get_user_by_email(email)
             
+            # Set kebun data
             data_kebun = {
                 'email': email,
                 'commodity': commodity,
@@ -217,7 +253,7 @@ class DataKebunResource(Resource):
                 'status': status
             }
 
-            # Upload data to firebase
+            # Upload kebun data to firestore database
             db = firestore.client()
             db.collection('data kebun').document(user.uid).set(data_kebun)
         
@@ -228,12 +264,16 @@ class DataKebunResource(Resource):
 
     @authorize_request
     def get(self):
+        # Get data kebun from firestore database
+
+        # Get request data from query
         email = request.args.get('email')
 
         try: 
-
+            # Get user data
             user = auth.get_user_by_email(email)
 
+            # Get kebun data from firestore database
             db = firestore.client()
             user_data = db.collection('data kebun').document(user.uid).get()
 
@@ -245,11 +285,14 @@ class DataKebunResource(Resource):
             return 'User not found', 404
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401 
-        
-model1 = load_model("ai_model/model/model1.h5")
-model2 = load_model("ai_model/model/model2.h5")
-model3 = load_model("ai_model/model/model3.h5")
 
+#=============================================#
+# Load AI Model 
+model1 = load_model("ai_model/model/model1.h5") # AI model for predicting crop commodity
+model2 = load_model("ai_model/model/model2.h5") # AI model for predicting plant disease
+model3 = load_model("ai_model/model/model3.h5") # AI model for predicting NPK value
+
+# Plant disease class from AI model
 disease_class = ["Apple black rot",
 "Apple healthy"
 "Apple rust",
@@ -288,6 +331,7 @@ disease_class = ["Apple black rot",
 "Tomato yellow leaf curl virus"]
 
 def preprocess_image(url):
+    # Image preprocessing for the AI model from image url
     res = requests.get(url).content
     img = Image.open(BytesIO(res)).convert('RGB')
     img = img.resize((224, 224))
@@ -301,34 +345,41 @@ def preprocess_image(url):
 
 def get_predicted_label_disease(pred_probabilities):
     # Turns an array of predictions probabilities into a label
-
     return disease_class[pred_probabilities.argmax()]
 
 class PredictPlantDisease(Resource):
     @authorize_request
     def post(self):
+        # Prediction for plant disease
         email = request.form.get('email')
 
+        # Check if request contains image
         if 'image' not in request.files:
             return jsonify({'error': 'No image found in the request'}), 401
         
         try:
             user = auth.get_user_by_email(email)
 
+            # Get image url
             image = request.files['image']
             url = upload(image)
 
+            # Preprocess the image
             image = preprocess_image(url)
-            pred = model2.predict(image)
+            pred = model2.predict(image) # Image prediction
             max_pred = max(pred[0])
             db = firestore.client()
+
+            # Threshold
             if max_pred > 0.8:
                 pred_class = get_predicted_label_disease(pred[0])
-                db.collection('data kebun').document(user.uid).update({'model2' : pred_class})
+                db.collection('data kebun').document(user.uid).update({'model2' : pred_class}) # Upload prediction data to data kebun
                 
+                # Get data kebun
                 data_kebun = db.collection('data kebun').document(user.uid).get()
                 komoditas = data_kebun.get('commodity')
                 
+                # Conditional check for updating data kebun "status" in firestore database
                 if 'model1' not in data_kebun.to_dict():
                     db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
                 else:
@@ -344,7 +395,7 @@ class PredictPlantDisease(Resource):
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
         
-
+# Crop commodity class from AI model
 komoditas_class = ['apel', 
                    'kopi', 
                    'anggur', 
@@ -352,26 +403,30 @@ komoditas_class = ['apel',
                    'padi']
 
 def get_predicted_label_commodity(pred_probabilities):
-    """
-    Turns an array of predictions probabilities into a label
-    """
+    # Turns an array of predictions probabilities into a label
     return komoditas_class[pred_probabilities.argmax()]
 
+# NPK prediction class from AI model
 npk_class = ['N', 'P', 'K']
 
 def get_predicted_label_npk(pred_probabilities):
-    """
-    Turns an array of predictions probabilities into a label
-    """
+    # Turns an array of predictions probabilities into a label
     return npk_class[pred_probabilities.argmax()]
 
 class PredictCropCommodity(Resource):
     @authorize_request
     def post(self):
+        # Crop commodity prediction
+
+        # Get request data (form-type)
         email = request.form.get('email')
         data = request.form
         
+        # Check if request contains image
         if 'image' in request.files:
+            # Image included in request -> continue to model3 prediction
+
+            # Get Image link
             image = request.files['image']
             url = upload(image)
             
@@ -380,15 +435,18 @@ class PredictCropCommodity(Resource):
             p = 80.0
             k = 80.0
 
+            # Make image prediction
             image = preprocess_image(url)
             pred = model3.predict(image)
             max_pred = max(pred[0])
 
+            # Threshold
             if max_pred > 0.8:
                 pred_class = get_predicted_label_npk(pred[0])
             else :
                 pred_class = "sehat"
 
+            # Update NPK data based on NPK prediction
             if pred_class == "N":
                 n = 20.0
             elif pred_class == "P":
@@ -396,6 +454,7 @@ class PredictCropCommodity(Resource):
             elif pred_class == "K":
                 k = 20.0
             
+            # Set model data based on other data from request
             model_data = [
             [n, 
              p, 
@@ -406,6 +465,7 @@ class PredictCropCommodity(Resource):
              float(data.get('rainfall'))]
             ]
         else:
+            # Set model data based on request data
             model_data = [
                 [float(data.get('n')), 
                 float(data.get('p')), 
@@ -417,19 +477,21 @@ class PredictCropCommodity(Resource):
             ]
 
         try:
+            # Get user data
             user = auth.get_user_by_email(email)
+
+            # Data prediction
             pred = model1.predict(model_data)
             pred_class = get_predicted_label_commodity(pred[0])
+
+            # Upload prediction data on firestore database
             db = firestore.client()
             db.collection('data kebun').document(user.uid).update({'model1' : pred_class})
             
             data_kebun = db.collection('data kebun').document(user.uid).get()
             komoditas = data_kebun.get('commodity')
-            # if komoditas != pred_class:
-            #     if 'model2' not in data_kebun.to_dict():
-            #         db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
-            #     else:
-            #         db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+
+            # Conditional check for updating data kebun "status" in firestore database
             if 'model2' not in data_kebun.to_dict():
                 if komoditas != pred_class:
                     db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
@@ -446,6 +508,7 @@ class PredictCropCommodity(Resource):
             return {'message': 'Email not found.'}, 401
 
 
+# API endpoints
 api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(RegisterGoogleResource, '/auth/google')
 api.add_resource(AuthTokenResource, '/auth/login')
