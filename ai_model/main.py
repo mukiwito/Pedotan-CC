@@ -191,9 +191,9 @@ class PredictCropCommodityAuto(Resource):
             url = upload(image)
             
             # NPK data initialization
-            n = 80
-            p = 80
-            k = 80
+            n = 80.0
+            p = 80.0
+            k = 80.0
 
             image = preprocess_image(url)
             pred = model3.predict(image)
@@ -205,30 +205,30 @@ class PredictCropCommodityAuto(Resource):
                 pred_class = "sehat"
 
             if pred_class == "N":
-                n = 20
+                n = 20.0
             elif pred_class == "P":
-                p = 20
+                p = 20.0
             elif pred_class == "K":
-                k = 20
+                k = 20.0
             
             model_data = [
             [n, 
              p, 
              k, 
-             data.get('temperature'), 
-             data.get('humidity'), 
-             data.get('ph'), 
-             data.get('rainfall')]
+             float(data.get('temperature')), 
+             float(data.get('humidity')), 
+             float(data.get('ph')), 
+             float(data.get('rainfall'))]
             ]
         else:
             model_data = [
-                [data.get('n'), 
-                data.get('p'), 
-                data.get('k'), 
-                data.get('temperature'), 
-                data.get('humidity'), 
-                data.get('ph'), 
-                data.get('rainfall')]
+                [float(data.get('n')), 
+                float(data.get('p')), 
+                float(data.get('k')), 
+                float(data.get('temperature')), 
+                float(data.get('humidity')), 
+                float(data.get('ph')), 
+                float(data.get('rainfall'))]
             ]
 
         try:
@@ -250,7 +250,7 @@ class PredictCropCommodityAuto(Resource):
             return {'message': 'Email not found.'}, 401
 
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
-api.add_resource(PredictCropCommodity, '/ai/predictcrop')
+api.add_resource(PredictCropCommodityAuto, '/ai/predictcrop')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

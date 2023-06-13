@@ -248,6 +248,7 @@ class DataKebunResource(Resource):
         
 model1 = load_model("ai_model/model/model1.h5")
 model2 = load_model("ai_model/model/model2.h5")
+model3 = load_model("ai_model/model/model3.h5")
 
 disease_class = ["Apple black rot",
 "Apple healthy"
@@ -356,22 +357,64 @@ def get_predicted_label_commodity(pred_probabilities):
     """
     return komoditas_class[pred_probabilities.argmax()]
 
+npk_class = ['N', 'P', 'K']
+
+def get_predicted_label_npk(pred_probabilities):
+    """
+    Turns an array of predictions probabilities into a label
+    """
+    return npk_class[pred_probabilities.argmax()]
 
 class PredictCropCommodity(Resource):
     @authorize_request
     def post(self):
-        email = request.json.get('email')
-        json_data = request.json
+        email = request.form.get('email')
+        data = request.form
         
-        model_data = [
-            [json_data['n'], 
-             json_data['p'], 
-             json_data['k'], 
-             json_data['temperature'], 
-             json_data['humidity'], 
-             json_data['ph'], 
-             json_data['rainfall']]
-        ]
+        if 'image' in request.files:
+            image = request.files['image']
+            url = upload(image)
+            
+            # NPK data initialization
+            n = 80.0
+            p = 80.0
+            k = 80.0
+
+            image = preprocess_image(url)
+            pred = model3.predict(image)
+            max_pred = max(pred[0])
+
+            if max_pred > 0.8:
+                pred_class = get_predicted_label_npk(pred[0])
+            else :
+                pred_class = "sehat"
+
+            if pred_class == "N":
+                n = 20.0
+            elif pred_class == "P":
+                p = 20.0
+            elif pred_class == "K":
+                k = 20.0
+            
+            model_data = [
+            [n, 
+             p, 
+             k, 
+             float(data.get('temperature')), 
+             float(data.get('humidity')), 
+             float(data.get('ph')), 
+             float(data.get('rainfall'))]
+            ]
+        else:
+            model_data = [
+                [float(data.get('n')), 
+                float(data.get('p')), 
+                float(data.get('k')), 
+                float(data.get('temperature')), 
+                float(data.get('humidity')), 
+                float(data.get('ph')), 
+                float(data.get('rainfall'))]
+            ]
 
         try:
             user = auth.get_user_by_email(email)
