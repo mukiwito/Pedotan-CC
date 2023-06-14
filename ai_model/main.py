@@ -164,11 +164,16 @@ class PredictCropCommodity(Resource):
             
             data_kebun = db.collection('data kebun').document(user.uid).get()
             komoditas = data_kebun.get('commodity')
-            if komoditas != pred_class:
-                if 'model2' not in data_kebun.to_dict():
+            if 'model2' not in data_kebun.to_dict():
+                if komoditas != pred_class:
                     db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
                 else:
+                    db.collection('data kebun').document(user.uid).update({'status': "baik"})
+            else:
+                if komoditas != pred_class:
                     db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+                else:
+                    db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
             return {'predict': pred_class}, 200
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
@@ -179,6 +184,37 @@ def get_predicted_label_npk(pred_probabilities):
     # Turns an array of predictions probabilities into a label
 
     return npk_class[pred_probabilities.argmax()]
+
+class PredictCropNPK(Resource):
+    def post(self):
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image found in the request'}), 401
+        
+        image = request.files['image']
+        url = upload(image)
+
+        # NPK data initialization
+        n = 80.0
+        p = 80.0
+        k = 80.0
+
+        image = preprocess_image(url)
+        pred = model3.predict(image)
+        max_pred = max(pred[0])
+
+        if max_pred > 0.8:
+            pred_class = get_predicted_label_npk(pred[0])
+        else :
+            pred_class = "sehat"
+
+        if pred_class == "N":
+            n = 20.0
+        elif pred_class == "P":
+            p = 20.0
+        elif pred_class == "K":
+            k = 20.0
+        
+        return {'n': n, 'p': p, 'k': k}, 200
 
 class PredictCropCommodityAuto(Resource):
     @authorize_request
@@ -251,6 +287,7 @@ class PredictCropCommodityAuto(Resource):
 
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
 api.add_resource(PredictCropCommodityAuto, '/ai/predictcrop')
+api.add_resource(PredictCropNPK, '/ai/predictnpk')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

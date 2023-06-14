@@ -416,82 +416,39 @@ def get_predicted_label_npk(pred_probabilities):
 class PredictCropCommodity(Resource):
     @authorize_request
     def post(self):
-        # Crop commodity prediction
+        # Predict crop commodity
 
-        # Get request data (form-type)
-        email = request.form.get('email')
-        data = request.form
+        # Get user's email data
+        email = request.json.get('email')
+        json_data = request.json
         
-        # Check if request contains image
-        if 'image' in request.files:
-            # Image included in request -> continue to model3 prediction
-
-            # Get Image link
-            image = request.files['image']
-            url = upload(image)
-            
-            # NPK data initialization
-            n = 80.0
-            p = 80.0
-            k = 80.0
-
-            # Make image prediction
-            image = preprocess_image(url)
-            pred = model3.predict(image)
-            max_pred = max(pred[0])
-
-            # Threshold
-            if max_pred > 0.8:
-                pred_class = get_predicted_label_npk(pred[0])
-            else :
-                pred_class = "sehat"
-
-            # Update NPK data based on NPK prediction
-            if pred_class == "N":
-                n = 20.0
-            elif pred_class == "P":
-                p = 20.0
-            elif pred_class == "K":
-                k = 20.0
-            
-            # Set model data based on other data from request
-            model_data = [
-            [n, 
-             p, 
-             k, 
-             float(data.get('temperature')), 
-             float(data.get('humidity')), 
-             float(data.get('ph')), 
-             float(data.get('rainfall'))]
-            ]
-        else:
-            # Set model data based on request data
-            model_data = [
-                [float(data.get('n')), 
-                float(data.get('p')), 
-                float(data.get('k')), 
-                float(data.get('temperature')), 
-                float(data.get('humidity')), 
-                float(data.get('ph')), 
-                float(data.get('rainfall'))]
-            ]
+        # Turn model data array for AI Model Prediction
+        model_data = [
+            [json_data['n'], 
+             json_data['p'], 
+             json_data['k'], 
+             json_data['temperature'], 
+             json_data['humidity'], 
+             json_data['ph'], 
+             json_data['rainfall']]
+        ]
 
         try:
             # Get user data
             user = auth.get_user_by_email(email)
 
-            # Data prediction
+            # Crop prediction using model1
             pred = model1.predict(model_data)
             pred_class = get_predicted_label_commodity(pred[0])
 
-            # Upload prediction data on firestore database
+            # Upload result
             db = firestore.client()
             db.collection('data kebun').document(user.uid).update({'model1' : pred_class})
             
             data_kebun = db.collection('data kebun').document(user.uid).get()
             komoditas = data_kebun.get('commodity')
 
-            # Conditional check for updating data kebun "status" in firestore database
+            # Conditional check for status update
             if 'model2' not in data_kebun.to_dict():
                 if komoditas != pred_class:
                     db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
@@ -502,11 +459,48 @@ class PredictCropCommodity(Resource):
                     db.collection('data kebun').document(user.uid).update({'status': "buruk"})
                 else:
                     db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
-            
             return {'predict': pred_class}, 200
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
+        
+class PredictCropNPK(Resource):
+    @authorize_request
+    def post(self):
+        # Prediction for NPK value
 
+        # Check if image attach to request
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image found in the request'}), 401
+        
+        # Get image url
+        image = request.files['image']
+        url = upload(image)
+
+        # NPK data initialization
+        n = 80.0
+        p = 80.0
+        k = 80.0
+
+        # Image preprocessing and prediction using model3
+        image = preprocess_image(url)
+        pred = model3.predict(image)
+        max_pred = max(pred[0])
+
+        # Threshold
+        if max_pred > 0.8:
+            pred_class = get_predicted_label_npk(pred[0])
+        else :
+            pred_class = "sehat"
+
+        # Update NPK value based on prediction result
+        if pred_class == "N":
+            n = 20.0
+        elif pred_class == "P":
+            p = 20.0
+        elif pred_class == "K":
+            k = 20.0
+        
+        return {'n': n, 'p': p, 'k': k}, 200
 
 # API endpoints
 api.add_resource(RegisterResource, '/auth/register')
@@ -517,6 +511,7 @@ api.add_resource(DataKebunResource, '/auth/datakebun')
 api.add_resource(LogoutResource, '/auth/logout')
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
 api.add_resource(PredictCropCommodity, '/ai/predictcrop')
+api.add_resource(PredictCropNPK, '/ai/predictnpk')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
