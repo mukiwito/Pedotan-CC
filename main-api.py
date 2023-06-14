@@ -228,63 +228,115 @@ class DataUserResource(Resource):
             return {'message': 'Email not found.'}, 401   
 
 
-class DataKebunResource(Resource):
+class FarmDataResource(Resource):
     @authorize_request
     def post(self):
-        # Input Data Kebun to firestore database
+        # Input user's farm data
 
-        # Get request data (JSON)
+        # Get request data
         email = request.json.get('email')
+        farm_name = request.json.get('farm_name')
         commodity = request.json.get('commodity')
         location = request.json.get('location')   
         area = request.json.get('area')
         status = "baik"
 
+        db = firestore.client()
         try:
             # Get user data
             user = auth.get_user_by_email(email)
-            
-            # Set kebun data
-            data_kebun = {
-                'email': email,
+            # Create user data (email)
+            user_doc_ref = db.collection('user farm').document(user.uid)
+            user_doc_ref.set({'email': email})
+
+            # Create farm document inside "farms" subcollection with auto generate farm_id
+            farms_collection_ref = user_doc_ref.collection('farms')
+            farm_doc_ref = farms_collection_ref.document()
+            # Set farm data to firestore database
+            farm_doc_ref.set({
+                'farm_name': farm_name,
                 'commodity': commodity,
                 'location': location,
                 'area': area,
                 'status': status
-            }
+            })
 
-            # Upload kebun data to firestore database
-            db = firestore.client()
-            db.collection('data kebun').document(user.uid).set(data_kebun)
-        
-            return {'message': 'Data Kebun Has Been Saved'}, 201
+            # Return farm_id
+            return {'message': 'Farm Data Has Been Saved', 'farm_id': farm_doc_ref.id}, 201
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
     
 
     @authorize_request
     def get(self):
-        # Get data kebun from firestore database
+        # Get all of the user's available farm data
 
-        # Get request data from query
+        # Get query parameters
         email = request.args.get('email')
 
-        try: 
+        try:
             # Get user data
             user = auth.get_user_by_email(email)
-
-            # Get kebun data from firestore database
+            # Get "farms" collection from user data
             db = firestore.client()
-            user_data = db.collection('data kebun').document(user.uid).get()
-
-            if user_data.exists:
-                return user_data.to_dict(), 200
-            else:
-                return 'User data not found', 404
-        except auth.UserNotFoundError:
-            return 'User not found', 404
+            farm_data = db.collection("user farm").document(user.uid).collection("farms").get()
+            
+            # Create user's farm data list
+            farm_data_list = []
+            for farm_doc in farm_data:
+                if farm_doc.exists:
+                    farm_id = farm_doc.id
+                    data = farm_doc.to_dict()
+                    data['farm_id'] = farm_id
+                    farm_data_list.append(data)
+            return farm_data_list
         except auth.EmailNotFoundError:
-            return {'message': 'Email not found.'}, 401 
+            return {'message': 'Email not found.'}, 401
+    
+    @authorize_request
+    def patch(self):
+        # Update user's farm data
+
+        # Get email dan farm_id data
+        email = request.json.get('email')
+        farm_id = request.json.get('farm_id')
+        
+        # Get farm data
+        farm_name = request.json.get('farm_name')
+        commodity = request.json.get('commodity')
+        location = request.json.get('location')   
+        area = request.json.get('area')
+        status = request.json.get('status')
+
+        # Setting up farm data
+        farm_data = {
+            'farm_name': farm_name,
+            'commodity': commodity,
+            'location': location,
+            'area': area,
+            'status': status
+        }
+
+        try:
+            # Upload farm data to firestore database
+            update_farm_data(email, farm_id, farm_data)
+            return {'message': 'Farm Data Has Been Updated'}, 201
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
+
+def get_farm_data(email, farm_id):
+    # Get user's farm data based on farm_id from firestore database
+    user = auth.get_user_by_email(email)
+    db = firestore.client()
+    farm_data = db.collection("user farm").document(user.uid).collection("farms").document(farm_id).get()
+    return farm_data
+
+def update_farm_data(email, farm_id, farm_data):
+    # Update user's farm data based on farm_id to firestore database
+    user = auth.get_user_by_email(email)
+    db = firestore.client()
+    db.collection("user farm").document(user.uid).collection("farms").document(farm_id).update(farm_data)
+
 
 #=============================================#
 # Load AI Model 
@@ -351,15 +403,16 @@ class PredictPlantDisease(Resource):
     @authorize_request
     def post(self):
         # Prediction for plant disease
+
+        # Get user's email and farm_id data
         email = request.form.get('email')
+        farm_id = request.form.get('farm_id')
 
         # Check if request contains image
         if 'image' not in request.files:
             return jsonify({'error': 'No image found in the request'}), 401
         
         try:
-            user = auth.get_user_by_email(email)
-
             # Get image url
             image = request.files['image']
             url = upload(image)
@@ -368,26 +421,25 @@ class PredictPlantDisease(Resource):
             image = preprocess_image(url)
             pred = model2.predict(image) # Image prediction
             max_pred = max(pred[0])
-            db = firestore.client()
 
             # Threshold
             if max_pred > 0.8:
                 pred_class = get_predicted_label_disease(pred[0])
-                db.collection('data kebun').document(user.uid).update({'model2' : pred_class}) # Upload prediction data to data kebun
-                
+                update_farm_data(email, farm_id, {'model2' : pred_class})
+
                 # Get data kebun
-                data_kebun = db.collection('data kebun').document(user.uid).get()
+                data_kebun = get_farm_data(email, farm_id)
                 komoditas = data_kebun.get('commodity')
                 
                 # Conditional check for updating data kebun "status" in firestore database
                 if 'model1' not in data_kebun.to_dict():
-                    db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
+                    update_farm_data(email, farm_id, {'status': "kurang baik"})
                 else:
                     data_model1 = data_kebun.get('model1')
                     if komoditas != data_model1:
-                        db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+                        update_farm_data(email, farm_id, {'status': "buruk"})
                     else:
-                        db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
+                        update_farm_data(email, farm_id, {'status': "kurang baik"})
             else :
                 pred_class = "sehat"
             
@@ -418,8 +470,9 @@ class PredictCropCommodity(Resource):
     def post(self):
         # Predict crop commodity
 
-        # Get user's email data
+        # Get user's email and farm_id data
         email = request.json.get('email')
+        farm_id = request.json.get('farm_id')
         json_data = request.json
         
         # Turn model data array for AI Model Prediction
@@ -434,31 +487,27 @@ class PredictCropCommodity(Resource):
         ]
 
         try:
-            # Get user data
-            user = auth.get_user_by_email(email)
-
             # Crop prediction using model1
             pred = model1.predict(model_data)
             pred_class = get_predicted_label_commodity(pred[0])
 
             # Upload result
-            db = firestore.client()
-            db.collection('data kebun').document(user.uid).update({'model1' : pred_class})
+            update_farm_data(email, farm_id, {'model1' : pred_class})
             
-            data_kebun = db.collection('data kebun').document(user.uid).get()
+            data_kebun = get_farm_data(email, farm_id)
             komoditas = data_kebun.get('commodity')
 
             # Conditional check for status update
             if 'model2' not in data_kebun.to_dict():
                 if komoditas != pred_class:
-                    db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
+                    update_farm_data(email, farm_id, {'status': "kurang baik"})
                 else:
-                    db.collection('data kebun').document(user.uid).update({'status': "baik"})
+                    update_farm_data(email, farm_id, {'status': "baik"})
             else:
                 if komoditas != pred_class:
-                    db.collection('data kebun').document(user.uid).update({'status': "buruk"})
+                    update_farm_data(email, farm_id, {'status': "buruk"})
                 else:
-                    db.collection('data kebun').document(user.uid).update({'status': "kurang baik"})
+                    update_farm_data(email, farm_id, {'status': "kurang baik"})
             return {'predict': pred_class}, 200
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
@@ -506,7 +555,7 @@ api.add_resource(RegisterResource, '/auth/register')
 api.add_resource(RegisterGoogleResource, '/auth/google')
 api.add_resource(AuthTokenResource, '/auth/login')
 api.add_resource(DataUserResource, '/auth/datauser')
-api.add_resource(DataKebunResource, '/auth/datakebun')
+api.add_resource(FarmDataResource, '/auth/farmdata')
 api.add_resource(LogoutResource, '/auth/logout')
 api.add_resource(PredictPlantDisease, '/ai/predictdisease')
 api.add_resource(PredictCropCommodity, '/ai/predictcrop')
