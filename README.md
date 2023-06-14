@@ -72,7 +72,7 @@ Here are the endpoints used by PEDOTAN-APP
 	Sending plant disease photo for AI prediction
 - **'/ai/predictcrop'**
 	Sending crop data for AI prediction
-- **'/ai/predictnpk'
+- **'/ai/predictnpk'**
 	Sending image for NPK value AI prediction
 
 ## Deployment
