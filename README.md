@@ -29,17 +29,19 @@ Data of PEDOTAN users will be saved on to firestore database. Here are the detai
 	 - Photo
  - Session Tokens
  - User's Farm Data
-	 - ID
-	 - User Email
-	 - Commodity
-	 - Area
-	 - Location
-	 - Status
+ 	 - Email
+	 - "Farms"
+	 	- Farm ID
+	 	- Name
+		- Commodity
+	 	- Area
+	 	- Location
+	 	- Status
 
 ## AI-Model
 For the implemention of AI-Model in PEDOTAN, we have **3 AI-Model** that have been developed by our AI Team. For further details of the model, please check out our AI Team Repository.
 
-Accessing the AI-Model from PEDOTAN apps will uses 2 APIs to **uploading image** and **sending data** required by the model. The APIs will preprocess the image and data to make sure the data that is used is suitable with the specification required by the AI-Model. 
+Accessing the AI-Model from PEDOTAN apps will uses 2 APIs to **uploading image** and **sending data** required by the model. The APIs will preprocess the image and data to make sure the data that is used is suitable with the specification required by the AI-Model. In addition, there is another API for sendin image to be used to get NPK value from the AI-Model.
 
 After the prediction is made by the AI-Model, the data prediction will be used to update the user's farm data "status" according the result of the data prediction.
 
@@ -57,17 +59,21 @@ Here are the endpoints used by PEDOTAN-APP
 		Sending a detailed user data on to firestore database
 	- GET
 		Retrieving user data from firestore database
-- **'/auth/datakebun'**
+- **'/auth/farmdata'**
 	- POST
 		Sending a user's farm data on to firestore database
 	- GET
-		Retrieving user's farm data from firestore database
+		Retrieving all of user's farm data from firestore database
+	- PATCH
+		Update user's farm data on firestore database
 - **'/auth/logout'**
 	Deleting user's session token
 - **'/ai/predictdisease'**
 	Sending plant disease photo for AI prediction
 - **'/ai/predictcrop'**
 	Sending crop data for AI prediction
+- **'/ai/predictnpk'
+	Sending image for NPK value AI prediction
 
 ## Deployment
 **PEDOTAN APIs are deployed on Google Cloud Platform Compute Engine.**
