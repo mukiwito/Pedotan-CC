@@ -464,7 +464,6 @@ class PredictCropCommodity(Resource):
             return {'message': 'Email not found.'}, 401
         
 class PredictCropNPK(Resource):
-    @authorize_request
     def post(self):
         # Prediction for NPK value
 
