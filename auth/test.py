@@ -94,6 +94,22 @@ class FarmDataResource(Resource):
             return {'message': 'Farm Data Has Been Updated'}, 201
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
+    
+    def delete(self):
+        # Get data
+        email = request.json.get('email')
+        farm_id = request.json.get('farm_id')
+
+        try:
+            delete_farm_data(email, farm_id)
+            return {'message': 'Farm Data Has Been Deleted'}, 200
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
+
+def delete_farm_data(email, farm_id):
+    user = auth.get_user_by_email(email)
+    db = firestore.client()
+    db.collection('user farm').document(user.uid).collection('farms').document(farm_id).delete()    
 
 def get_farm_data(email, farm_id):
     user = auth.get_user_by_email(email)

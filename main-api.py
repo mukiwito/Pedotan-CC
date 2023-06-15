@@ -324,6 +324,21 @@ class FarmDataResource(Resource):
         except auth.EmailNotFoundError:
             return {'message': 'Email not found.'}, 401
 
+    @authorize_request
+    def delete(self):
+        # Delete user's farm data based on farm_id
+
+        # Get request data
+        email = request.json.get('email')
+        farm_id = request.json.get('farm_id')
+
+        try:
+            # Delete user's farm data from firestore database
+            delete_farm_data(email, farm_id)
+            return {'message': 'Farm Data Has Been Deleted'}, 200
+        except auth.EmailNotFoundError:
+            return {'message': 'Email not found.'}, 401
+
 def get_farm_data(email, farm_id):
     # Get user's farm data based on farm_id from firestore database
     user = auth.get_user_by_email(email)
@@ -336,6 +351,12 @@ def update_farm_data(email, farm_id, farm_data):
     user = auth.get_user_by_email(email)
     db = firestore.client()
     db.collection("user farm").document(user.uid).collection("farms").document(farm_id).update(farm_data)
+
+def delete_farm_data(email, farm_id):
+    # Delete user's farm data based on farm_id from firestore database
+    user = auth.get_user_by_email(email)
+    db = firestore.client()
+    db.collection('user farm').document(user.uid).collection('farms').document(farm_id).delete()    
 
 
 #=============================================#
