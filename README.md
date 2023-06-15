@@ -12,13 +12,13 @@ Member of Cloud Computing for Bangkit Academy Capstone Team C23-PS379
 **
 
 ## User authentication and user data
-For the implementation of user authentication features, PEDOTAN make use of **firebase user authentication** feature. With this feature, user registration and authentication will be handled by **firebase**.
+For the implementation of user authentication features, PEDOTAN makes use of **the Firebase user authentication** feature. With this feature, user registration and authentication will be handled by **firebase**.
 
-User can register an account using both email/password method and google provider method.
+Users can register an account using both the email/password method and the Google provider method.
 
-When user make a login, user will be given a **unique token** that will be used to accessing other API. Without this unique token, user may not get the API access for other features.
+When the user makes a login, the user will be given a **unique token** that will be used to access other APIs. Without this unique token, the user may not get API access for other features.
 
-Data of PEDOTAN users will be saved on to firestore database. Here are the detail of the stored data on firestore database.
+Data of PEDOTAN users will be saved on to firestore database. Here is the detail of the stored data on firestore database.
  
  - User Data
 	 - Email
@@ -39,37 +39,39 @@ Data of PEDOTAN users will be saved on to firestore database. Here are the detai
 	 	- Status
 
 ## AI-Model
-For the implemention of AI-Model in PEDOTAN, we have **3 AI-Model** that have been developed by our AI Team. For further details of the model, please check out our AI Team Repository.
+For the implementation of AI-Model in PEDOTAN, we have **3 AI-Model** that have been developed by our AI Team. For further details on the model, please check out our AI Team Repository.
 
-Accessing the AI-Model from PEDOTAN apps will uses 2 APIs to **uploading image** and **sending data** required by the model. The APIs will preprocess the image and data to make sure the data that is used is suitable with the specification required by the AI-Model. In addition, there is another API for sendin image to be used to get NPK value from the AI-Model.
+Accessing the AI-Model from PEDOTAN apps will use 2 APIs to **upload image** and **send data** required by the model. The APIs will preprocess the image and data to make sure the data that is used is suitable for the specification required by the AI-Model. In addition, there is another API for sending images to be used to get NPK value from the AI-Model.
 
-After the prediction is made by the AI-Model, the data prediction will be used to update the user's farm data "status" according the result of the data prediction.
+After the prediction is made by the AI-Model, the data prediction will be used to update the user's farm data "status" according to the result of the data prediction.
 
 ## Endpoints
 Here are the endpoints used by PEDOTAN-APP
 
  - **'/auth/register'**
-	User registration using email/password method (saving user data in firestore)
+	User registration using email/password method (saving user data in Firestore)
 - **'/auth/google'**
-	User registration using google provider (saving user data in firestore)
+	User registration using Google provider (saving user data in Firestore)
 - **'/auth/login'**
-	Creating a unique session token for user
+	Creating a unique session token for the user
 - **'/auth/datauser'**
 	- POST
-		Sending a detailed user data on to firestore database
+		Sending detailed user data on to Firestore database
 	- GET
-		Retrieving user data from firestore database
+		Retrieving user data from the Firestore database
 - **'/auth/farmdata'**
 	- POST
-		Sending a user's farm data on to firestore database
+		Sending a user's farm data on to Firestore database
 	- GET
-		Retrieving all of user's farm data from firestore database
+		Retrieving all of the user's farm data from the Firestore database
 	- PATCH
-		Update user's farm data on firestore database
+		Update the user's farm data on the Firestore database
+	- DELETE
+   		Delete the user's farm data from the Firestore database
 - **'/auth/logout'**
-	Deleting user's session token
+	Deleting the user's session token
 - **'/ai/predictdisease'**
-	Sending plant disease photo for AI prediction
+	Sending plant disease photos for AI prediction
 - **'/ai/predictcrop'**
 	Sending crop data for AI prediction
 - **'/ai/predictnpk'**
@@ -77,7 +79,7 @@ Here are the endpoints used by PEDOTAN-APP
 
 ## Deployment
 **PEDOTAN APIs are deployed on Google Cloud Platform Compute Engine.**
-Here are the detailed specification of  the compute engine used for deployment.
+Here is the detailed specification of  the compute engine used for deployment.
 
 | Item | Specification |
 |:-----:|:------------:|
